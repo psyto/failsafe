@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { explain, treasuryShockScript } from "@/lib/scenario";
+import { explain, getScript, SCENARIOS, type ScenarioId } from "@/lib/scenario";
 import type { EventWithId, SimEvent, SystemRisk } from "@/lib/types";
 
 const SIM_URL = process.env.NEXT_PUBLIC_SIM_URL || "http://localhost:7777";
@@ -77,6 +77,7 @@ export default function Page() {
   const [elapsed, setElapsed] = useState(0);
   const [mode, setMode] = useState<Mode>("unknown");
   const [speed, setSpeed] = useState(1);
+  const [scenario, setScenario] = useState<ScenarioId>("treasury_shock");
   const idRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -193,7 +194,7 @@ export default function Page() {
       fetch(`${SIM_URL}/api/scenario/run`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "treasury_shock", speed }),
+        body: JSON.stringify({ name: scenario, speed }),
       }).catch(() => {});
     };
 
@@ -222,7 +223,8 @@ export default function Page() {
   }
 
   function runScripted() {
-    treasuryShockScript.forEach((ev) => {
+    const script = getScript(scenario);
+    script.forEach((ev) => {
       const realT = ev.t_ms / speed;
       const t = setTimeout(
         () => pushEvent({ ...ev, t_ms: Math.round(realT) }),
@@ -230,7 +232,7 @@ export default function Page() {
       );
       timersRef.current.push(t);
     });
-    const last = treasuryShockScript[treasuryShockScript.length - 1];
+    const last = script[script.length - 1];
     const finish = setTimeout(finishRun, last.t_ms / speed + 600);
     timersRef.current.push(finish);
   }
@@ -276,9 +278,15 @@ export default function Page() {
         <CityHeader />
         <CitySkyline events={events} />
         <KpiGrid kpis={kpis} riskStyle={riskStyle} />
+        <ScenarioPicker
+          scenario={scenario}
+          onChange={setScenario}
+          disabled={running}
+        />
         <TriggerBar
           running={running}
           done={done}
+          scenario={scenario}
           speed={speed}
           onSpeedChange={setSpeed}
           onTrigger={trigger}
@@ -570,9 +578,54 @@ function Tile({
   );
 }
 
+function ScenarioPicker({
+  scenario,
+  onChange,
+  disabled,
+}: {
+  scenario: ScenarioId;
+  onChange: (id: ScenarioId) => void;
+  disabled: boolean;
+}) {
+  const active = SCENARIOS.find((s) => s.id === scenario)!;
+  return (
+    <div className="mt-6 mb-2">
+      <div className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/40 mb-2">
+        Scenario
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        {SCENARIOS.map((s) => {
+          const sel = s.id === scenario;
+          return (
+            <button
+              key={s.id}
+              onClick={() => onChange(s.id)}
+              disabled={disabled}
+              className={`text-left px-4 py-3 transition border
+                ${sel
+                  ? "border-[var(--color-cyan)]/60 bg-[var(--color-cyan)]/5"
+                  : "border-[var(--color-grid)] hover:border-[var(--color-fg)]/30"}
+                ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+            >
+              <div className={`text-xs tracking-[0.2em] uppercase font-bold ${sel ? "text-[var(--color-cyan)] glow-cyan" : "text-[var(--color-fg)]/80"}`}>
+                {s.label}
+              </div>
+              <div className="mt-1 text-[10px] text-[var(--color-fg)]/40 leading-snug">
+                {s.tagline}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div className="sr-only">Selected: {active.label}</div>
+    </div>
+  );
+}
+
 function TriggerBar({
   running,
   done,
+  scenario,
   speed,
   onSpeedChange,
   onTrigger,
@@ -580,13 +633,15 @@ function TriggerBar({
 }: {
   running: boolean;
   done: boolean;
+  scenario: ScenarioId;
   speed: number;
   onSpeedChange: (s: number) => void;
   onTrigger: () => void;
   onReset: () => void;
 }) {
+  const meta = SCENARIOS.find((s) => s.id === scenario)!;
   return (
-    <div className="mt-8 flex flex-wrap items-center gap-4">
+    <div className="mt-4 flex flex-wrap items-center gap-4">
       <button
         onClick={onTrigger}
         disabled={running}
@@ -595,7 +650,7 @@ function TriggerBar({
             ? "border border-[var(--color-grid)] text-[var(--color-fg)]/40 cursor-not-allowed"
             : "border-glow-cyan text-[var(--color-cyan)] hover:bg-[var(--color-cyan)] hover:text-black"}`}
       >
-        ▶ Trigger Market Shock
+        ▶ {meta.verb} {meta.label}
       </button>
       {(running || done) && (
         <button
@@ -607,7 +662,7 @@ function TriggerBar({
       )}
       <SpeedToggle speed={speed} onSpeedChange={onSpeedChange} disabled={running} />
       <div className="text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40 ml-auto">
-        scenario · treasury_shock
+        scenario · {scenario}
       </div>
     </div>
   );
