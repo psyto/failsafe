@@ -13,10 +13,11 @@ fn share_bps(vault: &VaultState) -> i64 {
     vault.share_price_bps().unwrap_or(10_000)
 }
 
+use crate::api::Dials;
 use crate::events::{LiqMethod, Severity, SimEvent, SystemRisk};
 use crate::state::AppState;
 
-pub async fn run(state: AppState, speed: f64) {
+pub async fn run(state: AppState, speed: f64, dials: Dials) {
     let tx = state.tx.clone();
     let send = move |ev: SimEvent| {
         let _ = tx.send(ev);
@@ -26,30 +27,45 @@ pub async fn run(state: AppState, speed: f64) {
     let real = |story_ms: u64| ((story_ms as f64) / speed) as u64;
 
     let mut oracle = OracleState::new(OracleParams::hyperliquid_default());
-    let liq_params = LiquidationParams::hyperliquid_default();
+    let liq_params = LiquidationParams {
+        initial_margin_bps: ((10_000.0 / dials.leverage) as u32).max(50),
+        maintenance_margin_bps: ((dials.collateral_ratio * 10_000.0) as u32).max(10),
+        liquidation_fee_bps: 150,
+    };
     let mut scanner = LiquidationScanner::new(liq_params, InsuranceFund::new(150_000));
 
     let mut vault = VaultState::new(VaultParams { min_deposit: 1_000 });
     let _ = vault.deposit(800_000);
+
+    let baseline_depeg = 0.06_f64;
+    let vol_mult = dials.volatility / 0.11;
+    let depeg_stage1 = 0.02 * vol_mult;
+    let depeg_stage2 = baseline_depeg * vol_mult;
+    let usdc_x10000 = |drop: f64| ((1.0 - drop) * 10_000.0) as u64;
+
+    let leverage_collateral = |size: i64, entry: u64| -> i64 {
+        let notional = (size.unsigned_abs() as f64) * (entry as f64);
+        (notional / dials.leverage) as i64
+    };
 
     let accounts = vec![
         AccountSnapshot {
             account: AccountId(5101),
             position_size: PositionSize(600),
             avg_entry: MarkPrice(2000),
-            collateral: Notional(140_000),
+            collateral: Notional(leverage_collateral(600, 2000)),
         },
         AccountSnapshot {
             account: AccountId(5102),
             position_size: PositionSize(900),
             avg_entry: MarkPrice(2000),
-            collateral: Notional(190_000),
+            collateral: Notional(leverage_collateral(900, 2000) * 95 / 100),
         },
         AccountSnapshot {
             account: AccountId(5103),
             position_size: PositionSize(400),
             avg_entry: MarkPrice(2010),
-            collateral: Notional(72_000),
+            collateral: Notional(leverage_collateral(400, 2010) * 90 / 100),
         },
     ];
 
@@ -78,15 +94,18 @@ pub async fn run(state: AppState, speed: f64) {
     });
 
     tokio::time::sleep(pause(600)).await;
-    ingest_usdc(&mut oracle, 9_800, base_ts + 5);
+    let stage1_x10000 = usdc_x10000(depeg_stage1);
+    ingest_usdc(&mut oracle, stage1_x10000, base_ts + 5);
+    let next1 = (stage1_x10000 as f64) / 10_000.0;
     send(SimEvent::OracleUpdate {
         t_ms: real(1200),
         symbol: "USDC".into(),
         prev: 1.0000,
-        next: 0.9800,
-        note: "USDC drops 2%. AMM-skewed price feeds disagree.".into(),
+        next: next1,
+        note: format!("USDC drops {:.1}%. AMM-skewed price feeds disagree.", depeg_stage1 * 100.0),
     });
-    vault.mark_to_market(784_000);
+    let nav1 = (800_000.0 * (1.0 - depeg_stage1)) as i64;
+    vault.mark_to_market(nav1);
     send(SimEvent::MarketEvent {
         t_ms: real(1300),
         title: format!(
@@ -99,15 +118,21 @@ pub async fn run(state: AppState, speed: f64) {
     });
 
     tokio::time::sleep(pause(700)).await;
-    ingest_usdc(&mut oracle, 9_400, base_ts + 10);
+    let stage2_x10000 = usdc_x10000(depeg_stage2);
+    ingest_usdc(&mut oracle, stage2_x10000, base_ts + 10);
+    let next2 = (stage2_x10000 as f64) / 10_000.0;
     send(SimEvent::OracleUpdate {
         t_ms: real(2000),
         symbol: "USDC".into(),
-        prev: 0.9800,
-        next: 0.9400,
-        note: "USDC -6% from peg. Stablecoin liquidity rotates to USDT / DAI.".into(),
+        prev: next1,
+        next: next2,
+        note: format!(
+            "USDC -{:.1}% from peg. Stablecoin liquidity rotates to USDT / DAI.",
+            depeg_stage2 * 100.0
+        ),
     });
-    vault.mark_to_market(752_000);
+    let nav2 = (800_000.0 * (1.0 - depeg_stage2)) as i64;
+    vault.mark_to_market(nav2);
     send(SimEvent::MarketEvent {
         t_ms: real(2050),
         title: format!("Vault impaired: share px {} bps", share_bps(&vault)),
@@ -136,7 +161,7 @@ pub async fn run(state: AppState, speed: f64) {
     }
 
     tokio::time::sleep(pause(700)).await;
-    let mark_liq = MarkPrice(1720);
+    let mark_liq = MarkPrice(((2000.0 * (1.0 - depeg_stage2 * 2.5)) as u64).max(500));
     let report = scanner.scan(&accounts, mark_liq);
     let mut story_t = 3200u64;
     for record in &report.records {

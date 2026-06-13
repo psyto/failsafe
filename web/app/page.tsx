@@ -78,6 +78,11 @@ export default function Page() {
   const [mode, setMode] = useState<Mode>("unknown");
   const [speed, setSpeed] = useState(1);
   const [scenario, setScenario] = useState<ScenarioId>("treasury_shock");
+  const [dials, setDials] = useState({
+    volatility: 0.11,
+    leverage: 10,
+    collateral_ratio: 0.02,
+  });
   const idRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -194,7 +199,7 @@ export default function Page() {
       fetch(`${SIM_URL}/api/scenario/run`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: scenario, speed }),
+        body: JSON.stringify({ name: scenario, speed, dials }),
       }).catch(() => {});
     };
 
@@ -281,6 +286,13 @@ export default function Page() {
         <ScenarioPicker
           scenario={scenario}
           onChange={setScenario}
+          disabled={running}
+        />
+        <DialsPanel
+          scenario={scenario}
+          mode={mode}
+          dials={dials}
+          onChange={setDials}
           disabled={running}
         />
         <TriggerBar
@@ -574,6 +586,134 @@ function Tile({
       {sub && (
         <div className="mt-1 text-[10px] text-[var(--color-fg)]/40">{sub}</div>
       )}
+    </div>
+  );
+}
+
+type Dials = {
+  volatility: number;
+  leverage: number;
+  collateral_ratio: number;
+};
+
+const DIAL_DEFAULTS: Dials = {
+  volatility: 0.11,
+  leverage: 10,
+  collateral_ratio: 0.02,
+};
+
+function DialsPanel({
+  scenario,
+  mode,
+  dials,
+  onChange,
+  disabled,
+}: {
+  scenario: ScenarioId;
+  mode: Mode;
+  dials: Dials;
+  onChange: (d: Dials) => void;
+  disabled: boolean;
+}) {
+  const ignored = scenario === "oracle_attack";
+  const demoOnly = mode === "demo";
+  const noteText = ignored
+    ? "Oracle Attack tests deviation filter only — dials do not apply."
+    : demoOnly
+    ? "Dials affect live rdk runs. DEMO mode replays a fixed script."
+    : null;
+  return (
+    <div className="mt-4 mb-2 p-4 border border-[var(--color-grid)] bg-[var(--color-bg-panel)]/50">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/50">
+          Dials
+        </div>
+        <button
+          onClick={() => onChange(DIAL_DEFAULTS)}
+          disabled={disabled}
+          className="text-[10px] tracking-widest uppercase text-[var(--color-fg)]/50 hover:text-[var(--color-fg)] disabled:opacity-30"
+        >
+          Reset
+        </button>
+      </div>
+      <div className="space-y-2">
+        <DialSlider
+          label="Volatility"
+          value={dials.volatility}
+          min={0.01}
+          max={0.30}
+          step={0.005}
+          format={(v) => `${(v * 100).toFixed(1)}%`}
+          onChange={(v) => onChange({ ...dials, volatility: v })}
+          disabled={disabled || ignored}
+        />
+        <DialSlider
+          label="Leverage"
+          value={dials.leverage}
+          min={2}
+          max={50}
+          step={1}
+          format={(v) => `${v.toFixed(0)}x`}
+          onChange={(v) => onChange({ ...dials, leverage: v })}
+          disabled={disabled || ignored}
+        />
+        <DialSlider
+          label="Maint. Collateral"
+          value={dials.collateral_ratio}
+          min={0.001}
+          max={0.10}
+          step={0.001}
+          format={(v) => `${(v * 100).toFixed(2)}%`}
+          onChange={(v) => onChange({ ...dials, collateral_ratio: v })}
+          disabled={disabled || ignored}
+        />
+      </div>
+      {noteText && (
+        <div className="mt-3 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40">
+          {noteText}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DialSlider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  format,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  format: (v: number) => string;
+  onChange: (v: number) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-4">
+      <div className="w-32 text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/60">
+        {label}
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        disabled={disabled}
+        className="flex-1 accent-[var(--color-cyan)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      />
+      <div className="w-20 text-right text-xs tabular-nums text-[var(--color-cyan)] glow-cyan">
+        {format(value)}
+      </div>
     </div>
   );
 }

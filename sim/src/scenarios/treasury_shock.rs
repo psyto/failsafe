@@ -8,10 +8,11 @@ use rdk_liquidation::{
 };
 use rdk_oracle::{FeedId, OracleParams, OracleState, PriceObservation};
 
+use crate::api::Dials;
 use crate::events::{LiqMethod, Severity, SimEvent, SystemRisk};
 use crate::state::AppState;
 
-pub async fn run(state: AppState, speed: f64) {
+pub async fn run(state: AppState, speed: f64, dials: Dials) {
     let tx = state.tx.clone();
     let send = move |ev: SimEvent| {
         let _ = tx.send(ev);
@@ -21,27 +22,44 @@ pub async fn run(state: AppState, speed: f64) {
     let real = |story_ms: u64| ((story_ms as f64) / speed) as u64;
 
     let mut oracle = OracleState::new(OracleParams::hyperliquid_default());
-    let liq_params = LiquidationParams::hyperliquid_default();
+    let liq_params = LiquidationParams {
+        initial_margin_bps: ((10_000.0 / dials.leverage) as u32).max(50),
+        maintenance_margin_bps: ((dials.collateral_ratio * 10_000.0) as u32).max(10),
+        liquidation_fee_bps: 150,
+    };
     let mut scanner = LiquidationScanner::new(liq_params, InsuranceFund::new(150_000));
+
+    let baseline_drop = 0.11_f64;
+    let vol_mult = dials.volatility / baseline_drop;
+    let stage1_drop = 0.05 * vol_mult;
+    let stage2_drop = baseline_drop * vol_mult;
+    let initial_price = 2000_f64;
+    let mark1_price = (initial_price * (1.0 - stage1_drop)) as u64;
+    let mark2_price = (initial_price * (1.0 - stage2_drop)) as u64;
+
+    let leverage_collateral = |size: i64, entry: u64| -> i64 {
+        let notional = (size.unsigned_abs() as f64) * (entry as f64);
+        (notional / dials.leverage) as i64
+    };
 
     let accounts = vec![
         AccountSnapshot {
             account: AccountId(4471),
             position_size: PositionSize(1000),
             avg_entry: MarkPrice(2000),
-            collateral: Notional(200_000),
+            collateral: Notional(leverage_collateral(1000, 2000)),
         },
         AccountSnapshot {
             account: AccountId(4472),
             position_size: PositionSize(800),
             avg_entry: MarkPrice(1950),
-            collateral: Notional(150_000),
+            collateral: Notional(leverage_collateral(800, 1950) * 95 / 100),
         },
         AccountSnapshot {
             account: AccountId(4473),
             position_size: PositionSize(500),
             avg_entry: MarkPrice(1980),
-            collateral: Notional(90_000),
+            collateral: Notional(leverage_collateral(500, 1980) * 90 / 100),
         },
     ];
 
@@ -71,17 +89,17 @@ pub async fn run(state: AppState, speed: f64) {
 
     tokio::time::sleep(pause(600)).await;
     let t1 = base_ts + 10;
-    ingest_all(&mut oracle, 1900, t1);
+    ingest_all(&mut oracle, mark1_price, t1);
     send(SimEvent::OracleUpdate {
         t_ms: real(1000),
         symbol: "ETH-INDEX".into(),
         prev: 2000.0,
-        next: 1900.0,
-        note: "Risk-off flow drags ETH spot -5%.".into(),
+        next: mark1_price as f64,
+        note: format!("Risk-off flow drags ETH spot -{:.1}%.", stage1_drop * 100.0),
     });
 
     tokio::time::sleep(pause(500)).await;
-    let mark1 = MarkPrice(1900);
+    let mark1 = MarkPrice(mark1_price);
     let at_risk = accounts
         .iter()
         .filter(|a| matches!(margin_health(a, mark1, &liq_params), MarginHealth::AtRisk))
@@ -105,13 +123,16 @@ pub async fn run(state: AppState, speed: f64) {
 
     tokio::time::sleep(pause(400)).await;
     let t2 = base_ts + 20;
-    ingest_all(&mut oracle, 1780, t2);
+    ingest_all(&mut oracle, mark2_price, t2);
     send(SimEvent::OracleUpdate {
         t_ms: real(2600),
         symbol: "ETH-INDEX".into(),
-        prev: 1900.0,
-        next: 1780.0,
-        note: "Cascade trigger: median across all feeds clears deviation filter.".into(),
+        prev: mark1_price as f64,
+        next: mark2_price as f64,
+        note: format!(
+            "Cascade trigger: ETH -{:.1}% from open. Median across all feeds clears deviation filter.",
+            stage2_drop * 100.0
+        ),
     });
     send(SimEvent::System {
         t_ms: real(2610),
@@ -120,7 +141,7 @@ pub async fn run(state: AppState, speed: f64) {
     });
 
     tokio::time::sleep(pause(400)).await;
-    let mark2 = MarkPrice(1780);
+    let mark2 = MarkPrice(mark2_price);
     let report = scanner.scan(&accounts, mark2);
 
     let mut story_t = 3000u64;
