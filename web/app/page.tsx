@@ -86,7 +86,7 @@ export default function Page() {
   useEffect(() => {
     let active = true;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 600);
+    const timer = setTimeout(() => ctrl.abort(), 3500);
     fetch(`${SIM_URL}/api/health`, { signal: ctrl.signal })
       .then((r) => {
         if (active) setMode(r.ok ? "live" : "demo");
