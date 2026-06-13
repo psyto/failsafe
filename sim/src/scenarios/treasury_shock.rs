@@ -11,11 +11,14 @@ use rdk_oracle::{FeedId, OracleParams, OracleState, PriceObservation};
 use crate::events::{LiqMethod, Severity, SimEvent, SystemRisk};
 use crate::state::AppState;
 
-pub async fn run(state: AppState) {
+pub async fn run(state: AppState, speed: f64) {
     let tx = state.tx.clone();
     let send = move |ev: SimEvent| {
         let _ = tx.send(ev);
     };
+
+    let pause = |story_ms: u64| Duration::from_millis(((story_ms as f64) / speed) as u64);
+    let real = |story_ms: u64| ((story_ms as f64) / speed) as u64;
 
     let mut oracle = OracleState::new(OracleParams::hyperliquid_default());
     let liq_params = LiquidationParams::hyperliquid_default();
@@ -44,40 +47,40 @@ pub async fn run(state: AppState) {
 
     let base_ts: u64 = 1_700_000_000;
 
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    tokio::time::sleep(pause(200)).await;
     ingest_all(&mut oracle, 2000, base_ts);
     send(SimEvent::OracleUpdate {
-        t_ms: 200,
+        t_ms: real(200),
         symbol: "ETH-INDEX".into(),
         prev: 0.0,
         next: 2000.0,
         note: "Initial aggregation across 3 publisher feeds.".into(),
     });
 
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    tokio::time::sleep(pause(200)).await;
     send(SimEvent::MarketEvent {
-        t_ms: 400,
+        t_ms: real(400),
         title: "Treasury yield repricing".into(),
         detail: "UST10Y 2.00% → 5.00%. Risk-asset discount rates climb.".into(),
     });
     send(SimEvent::System {
-        t_ms: 410,
+        t_ms: real(410),
         risk: SystemRisk::Elevated,
         message: "Yield curve dislocation detected.".into(),
     });
 
-    tokio::time::sleep(Duration::from_millis(600)).await;
+    tokio::time::sleep(pause(600)).await;
     let t1 = base_ts + 10;
     ingest_all(&mut oracle, 1900, t1);
     send(SimEvent::OracleUpdate {
-        t_ms: 1000,
+        t_ms: real(1000),
         symbol: "ETH-INDEX".into(),
         prev: 2000.0,
         next: 1900.0,
         note: "Risk-off flow drags ETH spot -5%.".into(),
     });
 
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    tokio::time::sleep(pause(500)).await;
     let mark1 = MarkPrice(1900);
     let at_risk = accounts
         .iter()
@@ -85,7 +88,7 @@ pub async fn run(state: AppState) {
         .count();
     if at_risk > 0 {
         send(SimEvent::BrokerAlert {
-            t_ms: 1500,
+            t_ms: real(1500),
             broker: "Prime Broker Alpha".into(),
             severity: Severity::Warn,
             title: format!("{at_risk} position(s) at risk"),
@@ -93,34 +96,34 @@ pub async fn run(state: AppState) {
         });
     }
 
-    tokio::time::sleep(Duration::from_millis(700)).await;
+    tokio::time::sleep(pause(700)).await;
     send(SimEvent::MarketEvent {
-        t_ms: 2200,
+        t_ms: real(2200),
         title: "Stablecoin liquidity drains".into(),
         detail: "USDC market depth -20% across major venues.".into(),
     });
 
-    tokio::time::sleep(Duration::from_millis(400)).await;
+    tokio::time::sleep(pause(400)).await;
     let t2 = base_ts + 20;
     ingest_all(&mut oracle, 1780, t2);
     send(SimEvent::OracleUpdate {
-        t_ms: 2600,
+        t_ms: real(2600),
         symbol: "ETH-INDEX".into(),
         prev: 1900.0,
         next: 1780.0,
         note: "Cascade trigger: median across all feeds clears deviation filter.".into(),
     });
     send(SimEvent::System {
-        t_ms: 2610,
+        t_ms: real(2610),
         risk: SystemRisk::High,
         message: "Prime broker stress.".into(),
     });
 
-    tokio::time::sleep(Duration::from_millis(400)).await;
+    tokio::time::sleep(pause(400)).await;
     let mark2 = MarkPrice(1780);
     let report = scanner.scan(&accounts, mark2);
 
-    let mut t = 3000u64;
+    let mut story_t = 3000u64;
     for record in &report.records {
         let snap = accounts
             .iter()
@@ -133,27 +136,27 @@ pub async fn run(state: AppState) {
             _ => LiqMethod::Book,
         };
         send(SimEvent::Liquidation {
-            t_ms: t,
+            t_ms: real(story_t),
             position_id: format!("POS-{}", record.account.0),
             broker: broker_for(record.account),
             notional_usd: notional as f64,
             price: mark2.0 as f64,
             method,
         });
-        t += 250;
+        story_t += 250;
     }
 
-    tokio::time::sleep(Duration::from_millis(300)).await;
+    tokio::time::sleep(pause(300)).await;
     let net_drawn = (report.fund_withdrawals - report.fund_deposits).max(0);
     send(SimEvent::Insurance {
-        t_ms: t + 100,
+        t_ms: real(story_t + 100),
         drawn_usd: net_drawn as f64,
         balance_usd: scanner.fund_balance() as f64,
     });
 
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    tokio::time::sleep(pause(500)).await;
     send(SimEvent::System {
-        t_ms: t + 600,
+        t_ms: real(story_t + 600),
         risk: SystemRisk::Critical,
         message: format!(
             "Cascade contained. Insurance fund balance ${}.",

@@ -76,6 +76,7 @@ export default function Page() {
   const [kpis, setKpis] = useState(INITIAL_KPIS);
   const [elapsed, setElapsed] = useState(0);
   const [mode, setMode] = useState<Mode>("unknown");
+  const [speed, setSpeed] = useState(1);
   const idRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -192,7 +193,7 @@ export default function Page() {
       fetch(`${SIM_URL}/api/scenario/run`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "treasury_shock" }),
+        body: JSON.stringify({ name: "treasury_shock", speed }),
       }).catch(() => {});
     };
 
@@ -222,11 +223,15 @@ export default function Page() {
 
   function runScripted() {
     treasuryShockScript.forEach((ev) => {
-      const t = setTimeout(() => pushEvent(ev), ev.t_ms);
+      const realT = ev.t_ms / speed;
+      const t = setTimeout(
+        () => pushEvent({ ...ev, t_ms: Math.round(realT) }),
+        realT,
+      );
       timersRef.current.push(t);
     });
     const last = treasuryShockScript[treasuryShockScript.length - 1];
-    const finish = setTimeout(finishRun, last.t_ms + 600);
+    const finish = setTimeout(finishRun, last.t_ms / speed + 600);
     timersRef.current.push(finish);
   }
 
@@ -273,6 +278,8 @@ export default function Page() {
         <TriggerBar
           running={running}
           done={done}
+          speed={speed}
+          onSpeedChange={setSpeed}
           onTrigger={trigger}
           onReset={reset}
         />
@@ -441,16 +448,20 @@ function Tile({
 function TriggerBar({
   running,
   done,
+  speed,
+  onSpeedChange,
   onTrigger,
   onReset,
 }: {
   running: boolean;
   done: boolean;
+  speed: number;
+  onSpeedChange: (s: number) => void;
   onTrigger: () => void;
   onReset: () => void;
 }) {
   return (
-    <div className="mt-8 flex items-center gap-4">
+    <div className="mt-8 flex flex-wrap items-center gap-4">
       <button
         onClick={onTrigger}
         disabled={running}
@@ -469,8 +480,48 @@ function TriggerBar({
           Reset
         </button>
       )}
+      <SpeedToggle speed={speed} onSpeedChange={onSpeedChange} disabled={running} />
       <div className="text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40 ml-auto">
         scenario · treasury_shock
+      </div>
+    </div>
+  );
+}
+
+const SPEED_PRESETS = [0.5, 1, 2] as const;
+
+function SpeedToggle({
+  speed,
+  onSpeedChange,
+  disabled,
+}: {
+  speed: number;
+  onSpeedChange: (s: number) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/40">
+        Speed
+      </span>
+      <div className="flex">
+        {SPEED_PRESETS.map((p) => {
+          const active = p === speed;
+          return (
+            <button
+              key={p}
+              onClick={() => onSpeedChange(p)}
+              disabled={disabled}
+              className={`px-3 py-2 text-[11px] tracking-widest font-bold transition border-y border-r first:border-l first:rounded-l-sm last:rounded-r-sm
+                ${active
+                  ? "border-[var(--color-cyan)]/60 text-[var(--color-cyan)] glow-cyan bg-[var(--color-cyan)]/5"
+                  : "border-[var(--color-grid)] text-[var(--color-fg)]/50 hover:text-[var(--color-fg)] hover:border-[var(--color-fg)]/30"}
+                ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+            >
+              {p}x
+            </button>
+          );
+        })}
       </div>
     </div>
   );

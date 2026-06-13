@@ -26,12 +26,19 @@ async fn health() -> &'static str {
 #[derive(Debug, Deserialize)]
 pub struct RunScenarioReq {
     pub name: String,
+    #[serde(default = "default_speed")]
+    pub speed: f64,
+}
+
+fn default_speed() -> f64 {
+    1.0
 }
 
 #[derive(Debug, Serialize)]
 pub struct RunScenarioResp {
     pub run_id: String,
     pub started: bool,
+    pub speed: f64,
 }
 
 async fn scenario_run(
@@ -39,10 +46,12 @@ async fn scenario_run(
     Json(req): Json<RunScenarioReq>,
 ) -> Json<RunScenarioResp> {
     let run_id = uuid::Uuid::new_v4().to_string();
-    tokio::spawn(scenarios::run(state, req.name, run_id.clone()));
+    let speed = req.speed.clamp(0.25, 4.0);
+    tokio::spawn(scenarios::run(state, req.name, run_id.clone(), speed));
     Json(RunScenarioResp {
         run_id,
         started: true,
+        speed,
     })
 }
 
