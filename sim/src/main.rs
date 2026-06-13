@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(cors);
 
     let addr: SocketAddr = "0.0.0.0:7777".parse()?;
-    tracing::info!("neon-sim listening on {addr}");
+    tracing::info!("failsafe-sim listening on {addr}");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;

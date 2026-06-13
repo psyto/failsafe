@@ -264,6 +264,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "failsafe-sim"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "futures",
+ "rdk-clearing",
+ "rdk-clob",
+ "rdk-funding",
+ "rdk-liquidation",
+ "rdk-oracle",
+ "rdk-types",
+ "rdk-vault",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "ff"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -649,30 +673,6 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys",
-]
-
-[[package]]
-name = "neon-sim"
-version = "0.1.0"
-dependencies = [
- "axum",
- "futures",
- "rdk-clearing",
- "rdk-clob",
- "rdk-funding",
- "rdk-liquidation",
- "rdk-oracle",
- "rdk-types",
- "rdk-vault",
- "serde",
- "serde_json",
- "serde_yaml",
- "thiserror",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]

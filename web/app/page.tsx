@@ -323,7 +323,7 @@ function StatusBar({
     <header className="sticky top-0 z-30 backdrop-blur bg-black/60 border-b border-[var(--color-grid)]">
       <div className="max-w-6xl mx-auto px-6 h-10 flex items-center justify-between text-[11px] tracking-widest uppercase">
         <div className="flex items-center gap-3">
-          <span className="text-[var(--color-cyan)] glow-cyan font-bold">NEON</span>
+          <span className="text-[var(--color-cyan)] glow-cyan font-bold">FAILSAFE</span>
           <span className="text-[var(--color-fg)]/40">·</span>
           <span className="text-[var(--color-fg)]/70">
             Digital Finance Crisis Simulator
@@ -611,7 +611,7 @@ function Footer() {
   return (
     <footer className="relative z-10 border-t border-[var(--color-grid)] py-6 px-6">
       <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40">
-        <div>NEON · v0.1</div>
+        <div>FAILSAFE · v0.1</div>
         <div>Driven by rdk — Reth DeFi Kit</div>
         <div>Not a market. A simulator.</div>
       </div>

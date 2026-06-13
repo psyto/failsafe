@@ -9,7 +9,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Neon · Digital Finance Crisis Simulator",
+  title: "Failsafe · Digital Finance Crisis Simulator",
   description:
     "Run digital markets. Trigger failures. Understand why they happen.",
 };

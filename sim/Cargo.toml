@@ -1,11 +1,11 @@
 [package]
-name = "neon-sim"
+name = "failsafe-sim"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
 
 [[bin]]
-name = "neon-sim"
+name = "failsafe-sim"
 path = "src/main.rs"
 
 [dependencies]

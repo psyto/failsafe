@@ -160,9 +160,9 @@ export function explain(ev: SimEvent): EventExplain | null {
         cause:
           "Each cascade phase escalates risk one tier. Critical is reached when the insurance fund is drawn against.",
         impl: {
-          crate: "neon-sim",
+          crate: "failsafe-sim",
           symbol: "scenarios::treasury_shock::run",
-          path: "neon/sim/src/scenarios/treasury_shock.rs",
+          path: "failsafe/sim/src/scenarios/treasury_shock.rs",
         },
       };
   }
