@@ -8,7 +8,7 @@ const SIM_URL = process.env.NEXT_PUBLIC_SIM_URL || "http://localhost:7777";
 type Mode = "live" | "demo" | "unknown";
 
 const INITIAL_KPIS = {
-  population: "12,000,000",
+  population: 12_000_000,
   digitalAssetsUsd: 1_200_000_000_000,
   primeBrokers: 4,
   dexs: 12,
@@ -83,12 +83,22 @@ export default function Page() {
     leverage: 10,
     collateral_ratio: 0.02,
   });
+  const [idleTick, setIdleTick] = useState(0);
   const idRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const timelineRef = useRef<HTMLDivElement | null>(null);
   const autoFollowRef = useRef(true);
+  const failedBrokersRef = useRef<Set<string>>(new Set());
+
+  const started = running || done || events.length > 0;
+
+  useEffect(() => {
+    if (started) return;
+    const id = setInterval(() => setIdleTick((t) => t + 1), 800);
+    return () => clearInterval(id);
+  }, [started]);
 
   useEffect(() => {
     let active = true;
@@ -126,6 +136,7 @@ export default function Page() {
     }
     idRef.current = 0;
     autoFollowRef.current = true;
+    failedBrokersRef.current.clear();
     setEvents([]);
     setKpis(INITIAL_KPIS);
     setSelected(null);
@@ -243,12 +254,23 @@ export default function Page() {
   }
 
   function applyEvent(ev: EventWithId) {
+    if (ev.kind === "Liquidation" && !failedBrokersRef.current.has(ev.broker)) {
+      failedBrokersRef.current.add(ev.broker);
+    }
     setKpis((k) => {
       const next = { ...k };
       if (ev.kind === "System") next.risk = ev.risk;
       if (ev.kind === "Insurance") next.insuranceFundUsd = ev.balance_usd;
-      if (ev.kind === "BrokerAlert" && ev.severity === "Crit") {
-        next.primeBrokers = Math.max(0, k.primeBrokers - 0);
+      if (ev.kind === "Liquidation") {
+        next.digitalAssetsUsd = Math.max(
+          INITIAL_KPIS.digitalAssetsUsd * 0.5,
+          k.digitalAssetsUsd - 40_000_000_000,
+        );
+        next.primeBrokers = Math.max(
+          0,
+          INITIAL_KPIS.primeBrokers - failedBrokersRef.current.size,
+        );
+        next.dexs = Math.max(INITIAL_KPIS.dexs - 3, k.dexs - 1);
       }
       return next;
     });
@@ -292,21 +314,37 @@ export default function Page() {
 
         <div className="mt-4 space-y-3">
           <CitySkyline events={events} />
-          <KpiGrid kpis={kpis} riskStyle={riskStyle} />
+          <KpiGrid
+            kpis={kpis}
+            riskStyle={riskStyle}
+            idle={!started}
+            idleTick={idleTick}
+          />
         </div>
 
-        <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Timeline
-            events={events}
-            selected={selected}
-            onSelect={selectEvent}
-            autoFollowing={autoFollowRef.current && (running || done)}
-          />
-          <DetailPanel
-            selected={selected}
-            autoFollowing={autoFollowRef.current && running}
-          />
-        </div>
+        {started ? (
+          <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-4 fade-in-up">
+            <Timeline
+              events={events}
+              selected={selected}
+              onSelect={selectEvent}
+              autoFollowing={autoFollowRef.current && (running || done)}
+            />
+            <DetailPanel
+              selected={selected}
+              autoFollowing={autoFollowRef.current && running}
+            />
+          </div>
+        ) : (
+          <div className="mt-6 py-10 border border-dashed border-[var(--color-grid)] text-center">
+            <div className="text-[10px] tracking-[0.5em] uppercase text-[var(--color-fg)]/30">
+              Press ▶ Trigger to begin
+            </div>
+            <div className="mt-2 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/20">
+              Event timeline and implementation drill-down appear after the cascade starts
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="relative z-10 px-6 pb-12 max-w-7xl mx-auto border-t border-[var(--color-grid)] pt-6">
@@ -526,15 +564,38 @@ function CitySkyline({ events }: { events: EventWithId[] }) {
 function KpiGrid({
   kpis,
   riskStyle,
+  idle,
+  idleTick,
 }: {
   kpis: typeof INITIAL_KPIS;
   riskStyle: { label: string; cls: string; glow: string };
+  idle: boolean;
+  idleTick: number;
 }) {
   const fundPct = (kpis.insuranceFundUsd / kpis.insuranceFundCapUsd) * 100;
+  const popJitter = idle
+    ? Math.sin(idleTick * 0.31) * 6_400 + Math.sin(idleTick * 1.7) * 2_100
+    : 0;
+  const assetsJitter = idle
+    ? Math.sin(idleTick * 0.42) * 0.0028 + Math.sin(idleTick * 1.13) * 0.0012
+    : 0;
+  const popDisplay = Math.round(kpis.population + popJitter).toLocaleString();
+  const assetsDisplay = kpis.digitalAssetsUsd * (1 + assetsJitter);
+  const assetsDelta = idle ? assetsJitter * 100 : null;
+  const popDelta = idle ? popJitter / 1000 : null;
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-      <Tile label="POPULATION" value={kpis.population} />
-      <Tile label="DIGITAL ASSETS" value={formatUsd(kpis.digitalAssetsUsd)} accent="cyan" />
+      <Tile
+        label="POPULATION"
+        value={popDisplay}
+        sub={popDelta !== null ? `${popDelta >= 0 ? "▲" : "▼"} ${Math.abs(popDelta).toFixed(1)}k` : undefined}
+      />
+      <Tile
+        label="DIGITAL ASSETS"
+        value={formatUsd(assetsDisplay)}
+        sub={assetsDelta !== null ? `${assetsDelta >= 0 ? "▲" : "▼"} ${Math.abs(assetsDelta).toFixed(2)}%` : undefined}
+        accent="cyan"
+      />
       <Tile label="PRIME BROKERS" value={String(kpis.primeBrokers)} />
       <Tile label="DEX VENUES" value={String(kpis.dexs)} />
       <Tile
@@ -928,6 +989,10 @@ function DetailPanel({
   selected: EventWithId | null;
   autoFollowing: boolean;
 }) {
+  const [showImpl, setShowImpl] = useState(false);
+  useEffect(() => {
+    setShowImpl(false);
+  }, [selected?.id]);
   const e = selected ? explain(selected) : null;
   return (
     <aside>
@@ -964,25 +1029,44 @@ function DetailPanel({
             </p>
           </div>
           <div className="pt-3 border-t border-[var(--color-grid)]">
-            <div className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/50">
-              Implementation
-            </div>
-            <div className="mt-2 flex flex-col gap-1">
-              <code className="text-xs text-[var(--color-cyan)] glow-cyan">
-                {e.impl.crate}::{e.impl.symbol}
-              </code>
-              <span className="text-[11px] text-[var(--color-fg)]/40">
-                {e.impl.path}
-              </span>
-            </div>
-            <button
-              className="mt-3 px-3 py-2 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/70 border border-[var(--color-grid)] hover:border-[var(--color-cyan)]/50 hover:text-[var(--color-cyan)]"
-              onClick={() => {
-                navigator.clipboard?.writeText(e.impl.path);
-              }}
-            >
-              Copy path
-            </button>
+            {showImpl ? (
+              <div className="fade-in-up">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/50">
+                    Implementation
+                  </div>
+                  <button
+                    onClick={() => setShowImpl(false)}
+                    className="text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40 hover:text-[var(--color-fg)]"
+                  >
+                    Hide ▲
+                  </button>
+                </div>
+                <div className="mt-2 flex flex-col gap-1">
+                  <code className="text-xs text-[var(--color-cyan)] glow-cyan">
+                    {e.impl.crate}::{e.impl.symbol}
+                  </code>
+                  <span className="text-[11px] text-[var(--color-fg)]/40 break-all">
+                    {e.impl.path}
+                  </span>
+                </div>
+                <button
+                  className="mt-3 px-3 py-2 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/70 border border-[var(--color-grid)] hover:border-[var(--color-cyan)]/50 hover:text-[var(--color-cyan)]"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(e.impl.path);
+                  }}
+                >
+                  Copy path
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowImpl(true)}
+                className="w-full px-3 py-2 text-[11px] tracking-widest uppercase text-[var(--color-fg)]/70 border border-[var(--color-grid)] hover:border-[var(--color-cyan)]/50 hover:text-[var(--color-cyan)] transition"
+              >
+                ▼ View Implementation
+              </button>
+            )}
           </div>
         </div>
       )}
