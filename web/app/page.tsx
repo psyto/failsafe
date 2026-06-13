@@ -280,50 +280,54 @@ export default function Page() {
 
       <section
         ref={timelineRef}
-        className="relative z-10 px-6 pb-12 max-w-7xl mx-auto scroll-mt-12"
+        className="relative z-10 px-6 pb-6 max-w-7xl mx-auto scroll-mt-12"
       >
-        <CityHeader />
+        <TriggerBar
+          running={running}
+          done={done}
+          scenario={scenario}
+          onTrigger={trigger}
+          onReset={reset}
+        />
+
+        <div className="mt-4 space-y-3">
+          <CitySkyline events={events} />
+          <KpiGrid kpis={kpis} riskStyle={riskStyle} />
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Timeline
+            events={events}
+            selected={selected}
+            onSelect={selectEvent}
+            autoFollowing={autoFollowRef.current && (running || done)}
+          />
+          <DetailPanel
+            selected={selected}
+            autoFollowing={autoFollowRef.current && running}
+          />
+        </div>
+      </section>
+
+      <section className="relative z-10 px-6 pb-12 max-w-7xl mx-auto border-t border-[var(--color-grid)] pt-6">
+        <div className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/40 mb-3">
+          Configure
+        </div>
         <div className="space-y-3">
           <ScenarioPicker
             scenario={scenario}
             onChange={setScenario}
             disabled={running}
           />
-          <DialsPanel
+          <ControlsRow
+            speed={speed}
+            onSpeedChange={setSpeed}
             scenario={scenario}
             mode={mode}
             dials={dials}
-            onChange={setDials}
+            onDialsChange={setDials}
             disabled={running}
           />
-          <TriggerBar
-            running={running}
-            done={done}
-            scenario={scenario}
-            speed={speed}
-            onSpeedChange={setSpeed}
-            onTrigger={trigger}
-            onReset={reset}
-          />
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-3 space-y-3 min-w-0">
-            <CitySkyline events={events} />
-            <KpiGrid kpis={kpis} riskStyle={riskStyle} />
-          </div>
-          <div className="lg:col-span-2 space-y-3 min-w-0">
-            <Timeline
-              events={events}
-              selected={selected}
-              onSelect={selectEvent}
-              autoFollowing={autoFollowRef.current && (running || done)}
-            />
-            <DetailPanel
-              selected={selected}
-              autoFollowing={autoFollowRef.current && running}
-            />
-          </div>
         </div>
       </section>
 
@@ -528,7 +532,7 @@ function KpiGrid({
 }) {
   const fundPct = (kpis.insuranceFundUsd / kpis.insuranceFundCapUsd) * 100;
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
       <Tile label="POPULATION" value={kpis.population} />
       <Tile label="DIGITAL ASSETS" value={formatUsd(kpis.digitalAssetsUsd)} accent="cyan" />
       <Tile label="PRIME BROKERS" value={String(kpis.primeBrokers)} />
@@ -610,74 +614,76 @@ const DIAL_DEFAULTS: Dials = {
   collateral_ratio: 0.02,
 };
 
-function DialsPanel({
+function ControlsRow({
+  speed,
+  onSpeedChange,
   scenario,
   mode,
   dials,
-  onChange,
+  onDialsChange,
   disabled,
 }: {
+  speed: number;
+  onSpeedChange: (s: number) => void;
   scenario: ScenarioId;
   mode: Mode;
   dials: Dials;
-  onChange: (d: Dials) => void;
+  onDialsChange: (d: Dials) => void;
   disabled: boolean;
 }) {
   const ignored = scenario === "oracle_attack";
   const demoOnly = mode === "demo";
+  const dialsDisabled = disabled || ignored;
   const noteText = ignored
     ? "Oracle Attack tests deviation filter only — dials do not apply."
     : demoOnly
     ? "Dials affect live rdk runs. DEMO mode replays a fixed script."
     : null;
   return (
-    <div className="mt-4 mb-2 p-4 border border-[var(--color-grid)] bg-[var(--color-bg-panel)]/50">
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/50">
-          Dials
-        </div>
-        <button
-          onClick={() => onChange(DIAL_DEFAULTS)}
-          disabled={disabled}
-          className="text-[10px] tracking-widest uppercase text-[var(--color-fg)]/50 hover:text-[var(--color-fg)] disabled:opacity-30"
-        >
-          Reset
-        </button>
-      </div>
-      <div className="space-y-2">
-        <DialSlider
-          label="Volatility"
+    <div className="border border-[var(--color-grid)] bg-[var(--color-bg-panel)]/50 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <SpeedToggle speed={speed} onSpeedChange={onSpeedChange} disabled={disabled} />
+        <div className="h-6 w-px bg-[var(--color-grid)] hidden lg:block" />
+        <CompactDial
+          label="VOL"
           value={dials.volatility}
           min={0.01}
           max={0.30}
           step={0.005}
           format={(v) => `${(v * 100).toFixed(1)}%`}
-          onChange={(v) => onChange({ ...dials, volatility: v })}
-          disabled={disabled || ignored}
+          onChange={(v) => onDialsChange({ ...dials, volatility: v })}
+          disabled={dialsDisabled}
         />
-        <DialSlider
-          label="Leverage"
+        <CompactDial
+          label="LEV"
           value={dials.leverage}
           min={2}
           max={50}
           step={1}
           format={(v) => `${v.toFixed(0)}x`}
-          onChange={(v) => onChange({ ...dials, leverage: v })}
-          disabled={disabled || ignored}
+          onChange={(v) => onDialsChange({ ...dials, leverage: v })}
+          disabled={dialsDisabled}
         />
-        <DialSlider
-          label="Maint. Collateral"
+        <CompactDial
+          label="MM"
           value={dials.collateral_ratio}
           min={0.001}
           max={0.10}
           step={0.001}
           format={(v) => `${(v * 100).toFixed(2)}%`}
-          onChange={(v) => onChange({ ...dials, collateral_ratio: v })}
-          disabled={disabled || ignored}
+          onChange={(v) => onDialsChange({ ...dials, collateral_ratio: v })}
+          disabled={dialsDisabled}
         />
+        <button
+          onClick={() => onDialsChange(DIAL_DEFAULTS)}
+          disabled={disabled}
+          className="ml-auto text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40 hover:text-[var(--color-fg)] disabled:opacity-30"
+        >
+          Reset dials
+        </button>
       </div>
       {noteText && (
-        <div className="mt-3 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40">
+        <div className="mt-2 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40">
           {noteText}
         </div>
       )}
@@ -685,7 +691,7 @@ function DialsPanel({
   );
 }
 
-function DialSlider({
+function CompactDial({
   label,
   value,
   min,
@@ -705,10 +711,10 @@ function DialSlider({
   disabled: boolean;
 }) {
   return (
-    <div className="flex items-center gap-4">
-      <div className="w-32 text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/60">
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="text-[10px] tracking-[0.25em] uppercase text-[var(--color-fg)]/50">
         {label}
-      </div>
+      </span>
       <input
         type="range"
         min={min}
@@ -717,11 +723,11 @@ function DialSlider({
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         disabled={disabled}
-        className="flex-1 accent-[var(--color-cyan)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-24 md:w-32 accent-[var(--color-cyan)] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
       />
-      <div className="w-20 text-right text-xs tabular-nums text-[var(--color-cyan)] glow-cyan">
+      <span className="text-[11px] tabular-nums text-[var(--color-cyan)] glow-cyan w-14 text-right">
         {format(value)}
-      </div>
+      </span>
     </div>
   );
 }
@@ -737,10 +743,7 @@ function ScenarioPicker({
 }) {
   const active = SCENARIOS.find((s) => s.id === scenario)!;
   return (
-    <div className="mt-6 mb-2">
-      <div className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/40 mb-2">
-        Scenario
-      </div>
+    <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         {SCENARIOS.map((s) => {
           const sel = s.id === scenario;
@@ -774,26 +777,22 @@ function TriggerBar({
   running,
   done,
   scenario,
-  speed,
-  onSpeedChange,
   onTrigger,
   onReset,
 }: {
   running: boolean;
   done: boolean;
   scenario: ScenarioId;
-  speed: number;
-  onSpeedChange: (s: number) => void;
   onTrigger: () => void;
   onReset: () => void;
 }) {
   const meta = SCENARIOS.find((s) => s.id === scenario)!;
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-4">
+    <div className="flex flex-wrap items-center gap-3">
       <button
         onClick={onTrigger}
         disabled={running}
-        className={`group relative px-8 py-4 tracking-[0.25em] uppercase text-sm font-bold transition
+        className={`group relative px-10 py-5 tracking-[0.25em] uppercase text-base font-bold transition
           ${running
             ? "border border-[var(--color-grid)] text-[var(--color-fg)]/40 cursor-not-allowed"
             : "border-glow-cyan text-[var(--color-cyan)] hover:bg-[var(--color-cyan)] hover:text-black"}`}
@@ -808,9 +807,8 @@ function TriggerBar({
           Reset
         </button>
       )}
-      <SpeedToggle speed={speed} onSpeedChange={onSpeedChange} disabled={running} />
       <div className="text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40 ml-auto">
-        scenario · {scenario}
+        {meta.tagline}
       </div>
     </div>
   );
