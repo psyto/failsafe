@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { explain, treasuryShockScript } from "@/lib/scenario";
 import type { EventWithId, SimEvent, SystemRisk } from "@/lib/types";
 
@@ -274,6 +274,7 @@ export default function Page() {
 
       <section className="relative z-10 px-6 pb-12 max-w-6xl mx-auto">
         <CityHeader />
+        <CitySkyline events={events} />
         <KpiGrid kpis={kpis} riskStyle={riskStyle} />
         <TriggerBar
           running={running}
@@ -379,6 +380,117 @@ function CityHeader() {
   );
 }
 
+type BrokerStatus = "healthy" | "warn" | "crit" | "liq";
+
+const BROKERS: { name: string; x: number; w: number; h: number; windows: [number, number] }[] = [
+  { name: "Prime Broker Alpha", x: 60, w: 110, h: 170, windows: [4, 7] },
+  { name: "Prime Broker Beta", x: 200, w: 130, h: 200, windows: [5, 8] },
+  { name: "Prime Broker Gamma", x: 360, w: 90, h: 140, windows: [3, 6] },
+  { name: "Prime Broker Delta", x: 480, w: 120, h: 220, windows: [4, 9] },
+];
+
+function statusColor(s: BrokerStatus) {
+  switch (s) {
+    case "healthy": return { stroke: "var(--color-cyan)", fill: "rgba(0,240,255,0.06)", win: "var(--color-cyan)" };
+    case "warn":    return { stroke: "var(--color-yellow)", fill: "rgba(250,204,21,0.08)", win: "var(--color-yellow)" };
+    case "crit":    return { stroke: "var(--color-magenta)", fill: "rgba(255,0,170,0.10)", win: "var(--color-magenta)" };
+    case "liq":     return { stroke: "var(--color-crit)", fill: "rgba(255,59,59,0.18)", win: "var(--color-crit)" };
+  }
+}
+
+function CitySkyline({ events }: { events: EventWithId[] }) {
+  const statuses = useMemo(() => {
+    const map = new Map<string, BrokerStatus>();
+    for (const b of BROKERS) map.set(b.name, "healthy");
+    let lastLiqAt = 0;
+    for (const ev of events) {
+      if (ev.kind === "BrokerAlert") {
+        const cur = map.get(ev.broker) ?? "healthy";
+        if (ev.severity === "Crit") map.set(ev.broker, "crit");
+        else if (ev.severity === "Warn" && cur === "healthy") map.set(ev.broker, "warn");
+      }
+      if (ev.kind === "Liquidation") {
+        map.set(ev.broker, "liq");
+        lastLiqAt = ev.t_ms;
+      }
+    }
+    return { map, lastLiqAt };
+  }, [events]);
+
+  return (
+    <div className="mb-6 border border-[var(--color-grid)] bg-[var(--color-bg-panel)]/40 p-3">
+      <div className="flex items-center justify-between mb-2 text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/50">
+        <span>City Map · Tokyo Financial District</span>
+        <span className="text-[var(--color-fg)]/30">{BROKERS.length} prime brokers</span>
+      </div>
+      <svg viewBox="0 0 660 260" className="w-full h-32 md:h-40">
+        <defs>
+          <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(0,240,255,0.15)" />
+            <stop offset="100%" stopColor="rgba(0,240,255,0)" />
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="244" x2="660" y2="244" stroke="var(--color-grid)" strokeWidth="1" />
+        <rect x="0" y="244" width="660" height="16" fill="url(#ground)" />
+        {BROKERS.map((b) => {
+          const status = statuses.map.get(b.name) ?? "healthy";
+          const c = statusColor(status);
+          const top = 244 - b.h;
+          const winRows = b.windows[1];
+          const winCols = b.windows[0];
+          const padX = 12;
+          const padY = 16;
+          const cellW = (b.w - padX * 2) / winCols;
+          const cellH = (b.h - padY * 2) / winRows;
+          const winW = cellW * 0.55;
+          const winH = cellH * 0.45;
+          const isLiq = status === "liq";
+          return (
+            <g key={b.name} className={isLiq ? "flicker" : ""}>
+              <rect
+                x={b.x}
+                y={top}
+                width={b.w}
+                height={b.h}
+                fill={c.fill}
+                stroke={c.stroke}
+                strokeWidth="1.5"
+              />
+              {Array.from({ length: winRows }).flatMap((_, row) =>
+                Array.from({ length: winCols }).map((_, col) => {
+                  const dim = (row + col) % 3 === 0 && status === "healthy";
+                  return (
+                    <rect
+                      key={`${row}-${col}`}
+                      x={b.x + padX + col * cellW + (cellW - winW) / 2}
+                      y={top + padY + row * cellH + (cellH - winH) / 2}
+                      width={winW}
+                      height={winH}
+                      fill={c.win}
+                      opacity={dim ? 0.25 : 0.7}
+                    />
+                  );
+                })
+              )}
+              <text
+                x={b.x + b.w / 2}
+                y={252}
+                textAnchor="middle"
+                fontSize="8"
+                fontFamily="JetBrains Mono, monospace"
+                fill={c.stroke}
+                letterSpacing="2"
+              >
+                {b.name.split(" ")[2].toUpperCase()}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function KpiGrid({
   kpis,
   riskStyle,
@@ -422,6 +534,16 @@ function Tile({
   valueCls?: string;
   accent?: "default" | "cyan" | "magenta" | "crit";
 }) {
+  const [flash, setFlash] = useState(false);
+  const prevRef = useRef(value);
+  useEffect(() => {
+    if (prevRef.current !== value) {
+      prevRef.current = value;
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 500);
+      return () => clearTimeout(t);
+    }
+  }, [value]);
   const border =
     accent === "cyan"
       ? "border-glow-cyan"
@@ -431,11 +553,14 @@ function Tile({
       ? "border border-[var(--color-magenta)]/40"
       : "border border-[var(--color-grid)]";
   return (
-    <div className={`p-4 bg-[var(--color-bg-panel)]/60 ${border}`}>
+    <div className={`p-4 bg-[var(--color-bg-panel)]/60 transition-colors ${border} ${flash ? "tile-flash" : ""}`}>
       <div className="text-[10px] tracking-[0.25em] uppercase text-[var(--color-fg)]/50">
         {label}
       </div>
-      <div className={`mt-2 text-2xl font-bold tracking-tight ${valueCls ?? ""}`}>
+      <div
+        key={value}
+        className={`mt-2 text-2xl font-bold tracking-tight fade-in-up ${valueCls ?? ""}`}
+      >
         {value}
       </div>
       {sub && (
