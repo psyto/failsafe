@@ -260,9 +260,9 @@ export default function Page() {
     <main className="min-h-screen relative grid-bg">
       <StatusBar elapsed={elapsed} running={running} done={done} mode={mode} />
 
-      <section className="relative z-10 px-6 pt-16 pb-12 max-w-6xl mx-auto">
+      <section className="relative z-10 px-6 pt-12 pb-6 max-w-7xl mx-auto">
         <div className="flex flex-col gap-2">
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[0.95]">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[0.95]">
             <span className="block glow-cyan text-[var(--color-cyan)]">
               Break the financial system.
             </span>
@@ -270,53 +270,61 @@ export default function Page() {
               Safely.
             </span>
           </h1>
-          <p className="mt-6 text-sm md:text-base text-[var(--color-fg)]/70 max-w-2xl">
+          <p className="mt-4 text-sm text-[var(--color-fg)]/70 max-w-2xl">
             Run digital markets. Trigger failures. Understand why they happen.
-            <br />
             A live sandbox of a cyberpunk-era financial system, driven by a real
             DeFi L1 engine.
           </p>
         </div>
       </section>
 
-      <section className="relative z-10 px-6 pb-12 max-w-6xl mx-auto">
-        <CityHeader />
-        <CitySkyline events={events} />
-        <KpiGrid kpis={kpis} riskStyle={riskStyle} />
-        <ScenarioPicker
-          scenario={scenario}
-          onChange={setScenario}
-          disabled={running}
-        />
-        <DialsPanel
-          scenario={scenario}
-          mode={mode}
-          dials={dials}
-          onChange={setDials}
-          disabled={running}
-        />
-        <TriggerBar
-          running={running}
-          done={done}
-          scenario={scenario}
-          speed={speed}
-          onSpeedChange={setSpeed}
-          onTrigger={trigger}
-          onReset={reset}
-        />
-      </section>
-
       <section
         ref={timelineRef}
-        className="relative z-10 px-6 pb-24 pt-2 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6 scroll-mt-12"
+        className="relative z-10 px-6 pb-12 max-w-7xl mx-auto scroll-mt-12"
       >
-        <Timeline
-          events={events}
-          selected={selected}
-          onSelect={selectEvent}
-          autoFollowing={autoFollowRef.current && (running || done)}
-        />
-        <DetailPanel selected={selected} autoFollowing={autoFollowRef.current && running} />
+        <CityHeader />
+        <div className="space-y-3">
+          <ScenarioPicker
+            scenario={scenario}
+            onChange={setScenario}
+            disabled={running}
+          />
+          <DialsPanel
+            scenario={scenario}
+            mode={mode}
+            dials={dials}
+            onChange={setDials}
+            disabled={running}
+          />
+          <TriggerBar
+            running={running}
+            done={done}
+            scenario={scenario}
+            speed={speed}
+            onSpeedChange={setSpeed}
+            onTrigger={trigger}
+            onReset={reset}
+          />
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <div className="lg:col-span-3 space-y-3 min-w-0">
+            <CitySkyline events={events} />
+            <KpiGrid kpis={kpis} riskStyle={riskStyle} />
+          </div>
+          <div className="lg:col-span-2 space-y-3 min-w-0">
+            <Timeline
+              events={events}
+              selected={selected}
+              onSelect={selectEvent}
+              autoFollowing={autoFollowRef.current && (running || done)}
+            />
+            <DetailPanel
+              selected={selected}
+              autoFollowing={autoFollowRef.current && running}
+            />
+          </div>
+        </div>
       </section>
 
       <Footer />
@@ -443,7 +451,7 @@ function CitySkyline({ events }: { events: EventWithId[] }) {
         <span>City Map · Tokyo Financial District</span>
         <span className="text-[var(--color-fg)]/30">{BROKERS.length} prime brokers</span>
       </div>
-      <svg viewBox="0 0 660 260" className="w-full h-32 md:h-40">
+      <svg viewBox="0 0 660 260" className="w-full h-24 md:h-32">
         <defs>
           <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="rgba(0,240,255,0.15)" />
@@ -520,7 +528,7 @@ function KpiGrid({
 }) {
   const fundPct = (kpis.insuranceFundUsd / kpis.insuranceFundCapUsd) * 100;
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
       <Tile label="POPULATION" value={kpis.population} />
       <Tile label="DIGITAL ASSETS" value={formatUsd(kpis.digitalAssetsUsd)} accent="cyan" />
       <Tile label="PRIME BROKERS" value={String(kpis.primeBrokers)} />
@@ -579,7 +587,7 @@ function Tile({
       </div>
       <div
         key={value}
-        className={`mt-2 text-2xl font-bold tracking-tight fade-in-up ${valueCls ?? ""}`}
+        className={`mt-1 text-xl font-bold tracking-tight fade-in-up ${valueCls ?? ""}`}
       >
         {value}
       </div>
@@ -858,8 +866,14 @@ function Timeline({
   onSelect: (ev: EventWithId | null) => void;
   autoFollowing: boolean;
 }) {
+  const listRef = useRef<HTMLOListElement | null>(null);
+  useEffect(() => {
+    if (autoFollowing && listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [events.length, autoFollowing]);
   return (
-    <div className="lg:col-span-3">
+    <div>
       <div className="flex items-center justify-between border-b border-[var(--color-grid)] pb-2 mb-3">
         <div className="flex items-center gap-3 text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/50">
           <span>Event Timeline</span>
@@ -874,11 +888,11 @@ function Timeline({
         </div>
       </div>
       {events.length === 0 ? (
-        <div className="px-4 py-12 border border-dashed border-[var(--color-grid)] text-center text-[var(--color-fg)]/30 text-sm">
+        <div className="px-4 py-10 border border-dashed border-[var(--color-grid)] text-center text-[var(--color-fg)]/30 text-sm">
           No events. Trigger a market shock to begin.
         </div>
       ) : (
-        <ol className="space-y-1">
+        <ol ref={listRef} className="space-y-1 max-h-[300px] overflow-y-auto pr-1">
           {events.map((ev) => {
             const isSel = selected?.id === ev.id;
             return (
@@ -918,7 +932,7 @@ function DetailPanel({
 }) {
   const e = selected ? explain(selected) : null;
   return (
-    <aside className="lg:col-span-2 lg:sticky lg:top-14 lg:self-start">
+    <aside>
       <div className="flex items-center justify-between border-b border-[var(--color-grid)] pb-2 mb-3">
         <div className="flex items-center gap-3 text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/50">
           <span>Why did this happen?</span>
