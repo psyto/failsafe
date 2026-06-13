@@ -1,0 +1,14 @@
+# Rust
+sim/target/
+
+# Node
+web/node_modules/
+web/.next/
+web/out/
+web/.vercel/
+
+# Env / system
+.env
+.env.local
+.DS_Store
+*.log

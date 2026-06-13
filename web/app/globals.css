@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #050507;
+  --color-bg-panel: #0b0b12;
+  --color-grid: #14141e;
+  --color-cyan: #00f0ff;
+  --color-magenta: #ff00aa;
+  --color-yellow: #facc15;
+  --color-crit: #ff3b3b;
+  --color-ok: #10b981;
+  --color-dim: #4b5563;
+  --color-fg: #e5e7eb;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-cyan);
+  color: #000;
+}
+
+.glow-cyan {
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6), 0 0 24px rgba(0, 240, 255, 0.25);
+}
+
+.glow-magenta {
+  text-shadow: 0 0 8px rgba(255, 0, 170, 0.6), 0 0 24px rgba(255, 0, 170, 0.25);
+}
+
+.glow-crit {
+  text-shadow: 0 0 8px rgba(255, 59, 59, 0.7), 0 0 24px rgba(255, 59, 59, 0.3);
+}
+
+.border-glow-cyan {
+  box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.35), 0 0 24px rgba(0, 240, 255, 0.18) inset;
+}
+
+.border-glow-crit {
+  box-shadow: 0 0 0 1px rgba(255, 59, 59, 0.45), 0 0 24px rgba(255, 59, 59, 0.2) inset;
+}
+
+.scanline::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0) 2px,
+    rgba(255, 255, 255, 0.012) 3px,
+    rgba(255, 255, 255, 0) 4px
+  );
+  z-index: 50;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(to right, var(--color-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+.fade-in-up {
+  animation: fade-in-up 280ms ease-out both;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.flicker {
+  animation: flicker 220ms steps(2, end) 3;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
