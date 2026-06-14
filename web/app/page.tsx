@@ -293,9 +293,9 @@ export default function Page() {
             </span>
           </h1>
           <p className="mt-4 text-sm text-[var(--color-fg)]/70 max-w-2xl">
-            Run digital markets. Trigger failures. Understand why they happen.
-            A live sandbox of a cyberpunk-era financial system, driven by a real
-            DeFi L1 engine.
+            Replay the canonical financial events of Tokyo 2042. Tune the
+            parameters, trigger the cascade, watch the city react. Driven by
+            the same Fabrknt engines that run the city.
           </p>
         </div>
       </section>
@@ -404,7 +404,7 @@ function StatusBar({
           <span className="text-[var(--color-cyan)] glow-cyan font-bold">FAILSAFE</span>
           <span className="text-[var(--color-fg)]/40">·</span>
           <span className="text-[var(--color-fg)]/70">
-            Digital Finance Crisis Simulator
+            Tokyo 2042 · Archive Terminal
           </span>
           <span className="text-[var(--color-fg)]/40">v0.1</span>
           <span className={`ml-1 px-1.5 py-0.5 border text-[10px] tracking-widest ${modeBadge.cls}`}>
@@ -1113,9 +1113,9 @@ function Footer() {
   return (
     <footer className="relative z-10 border-t border-[var(--color-grid)] py-6 px-6">
       <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40">
-        <div>FAILSAFE · v0.1</div>
-        <div>Driven by rdk — Reth DeFi Kit</div>
-        <div>Not a market. A simulator.</div>
+        <div>FAILSAFE · v0.1 · Tokyo 2042 archive access</div>
+        <div>Engines: Fabrknt rdk · OpenHL · Princeps</div>
+        <div>The system shown here is the system that runs.</div>
       </div>
     </footer>
   );

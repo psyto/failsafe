@@ -306,9 +306,9 @@ export function explain(ev: SimEvent): EventExplain | null {
     case "OracleUpdate":
       return {
         summary:
-          "An off-chain price publisher reported a new observation. The on-chain oracle deduplicated, dropped stale feeds, and re-aggregated the median index.",
+          "A Photon Network publisher pushed a new signed observation. The on-chain oracle verified the signature, dropped stale feeds, and re-aggregated the median index across the consortium's surviving publishers.",
         cause:
-          "Treasury yield repriced 3pp in minutes. The oracle's deviation filter let the move through because all publishers agreed.",
+          "Sufficient publishers agreed within the deviation tolerance, so the move propagated to the on-chain index that Tachi, Kintetsu, Atlas, and Black Ice all mark against.",
         impl: {
           crate: "rdk-oracle",
           symbol: "OracleState::ingest + refresh",
@@ -318,21 +318,21 @@ export function explain(ev: SimEvent): EventExplain | null {
     case "MarketEvent":
       return {
         summary:
-          "Stablecoin AMMs widened spreads as LPs withdrew. Settlement liquidity halves on rapid yield moves.",
+          "A Roppongi Vertical Markets venue or a Photon publisher reported a city-level state change — liquidity, collateral, or external rate.",
         cause:
-          "Higher risk-free rate makes stablecoin LPing unattractive. Capital rotates to T-bills.",
+          "The financial system is reacting to a real-world Tokyo 2042 event. Megacorp risk teams are watching their margin books in real time.",
         impl: {
           crate: "rdk-clob",
-          symbol: "Book::submit (depth thinning)",
+          symbol: "Book depth / liquidity model",
           path: "rdk/crates/clob/src/book.rs",
         },
       };
     case "BrokerAlert":
       return {
         summary:
-          "Prime broker collateral was re-valued under the new yield curve. LTV crossed maintenance margin.",
+          "A Megacorp Prime Broker's risk engine reported its margin state changed tier. Either positions are now sitting between initial and maintenance margin (Warn), or maintenance is breached (Crit).",
         cause:
-          "Tokenized Treasury haircuts widen with volatility. The broker's free equity went negative under the new mark.",
+          "The broker's free-equity formula (collateral + unrealized PnL − initial-margin requirement) crossed zero under the new mark.",
         impl: {
           crate: "princeps-portfolio",
           symbol: "compute_free_equity",
@@ -342,9 +342,9 @@ export function explain(ev: SimEvent): EventExplain | null {
     case "Liquidation":
       return {
         summary:
-          "Liquidation scanner classified the account as Liquidatable and emitted a close order. Book-cross failed for one position, so ADL took over.",
+          "The Megacorp's liquidation scanner classified one of its accounts as Liquidatable or Underwater and emitted a close order against the on-chain CLOB. If the book couldn't absorb the size, ADL force-closed counterparty winners.",
         cause:
-          "Maintenance margin breached. Insurance fund eats the residual shortfall.",
+          "Maintenance margin breached. The Backstop (Insurance Fund) absorbs any residual shortfall from this close — that's its only job.",
         impl: {
           crate: "rdk-liquidation",
           symbol: "LiquidationScanner::scan",
@@ -354,9 +354,9 @@ export function explain(ev: SimEvent): EventExplain | null {
     case "Insurance":
       return {
         summary:
-          "Underwater closes drew the insurance fund. Remaining balance is the system's only buffer before socialized losses.",
+          "The Backstop — Tokyo 2042's protocol-level Insurance Fund — covered an underwater liquidation's shortfall. Each draw counts down its $150M cap. Once exhausted, the system goes to ADL haircuts on profitable counterparties.",
         cause:
-          "Loss = (entry − close) × size. When that exceeds posted collateral, the fund absorbs the gap.",
+          "Per-close shortfall = liquidation fee + max(0, |negative post-close equity|). The Backstop transfers that to the closing broker, the position closes cleanly, the trader walks away with nothing.",
         impl: {
           crate: "rdk-liquidation",
           symbol: "InsuranceFund::withdraw",
@@ -366,13 +366,13 @@ export function explain(ev: SimEvent): EventExplain | null {
     case "System":
       return {
         summary:
-          "System risk grade is derived from oracle deviation, open-interest concentration, and insurance fund headroom.",
+          "City-wide System Risk grade is derived from oracle deviation, open-interest concentration across the 4 Megacorps, and Backstop headroom. Low → Elevated → High → Critical. Critical means the Backstop has been drawn against.",
         cause:
-          "Each cascade phase escalates risk one tier. Critical is reached when the insurance fund is drawn against.",
+          "Each cascade phase escalates one tier. Critical was the last event before the simulator was first authorized for public access.",
         impl: {
           crate: "failsafe-sim",
-          symbol: "scenarios::treasury_shock::run",
-          path: "failsafe/sim/src/scenarios/treasury_shock.rs",
+          symbol: "scenarios::*::run",
+          path: "failsafe/sim/src/scenarios/",
         },
       };
   }

@@ -9,9 +9,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Failsafe · Digital Finance Crisis Simulator",
+  title: "Failsafe · Tokyo 2042 Archive Terminal",
   description:
-    "Run digital markets. Trigger failures. Understand why they happen.",
+    "Replay canonical financial events from Tokyo 2042. Driven by Fabrknt's real L1 engines.",
 };
 
 export default function RootLayout({
