@@ -79,7 +79,7 @@ pub async fn run(state: AppState, speed: f64) {
             });
             send(SimEvent::BrokerAlert {
                 t_ms: real(1550),
-                broker: "Oracle Layer".into(),
+                broker: "Photon Network".into(),
                 severity: Severity::Info,
                 title: "Deviation filter rejected publisher #4".into(),
                 detail: format!(
@@ -92,7 +92,7 @@ pub async fn run(state: AppState, speed: f64) {
         Err(e) => {
             send(SimEvent::BrokerAlert {
                 t_ms: real(1500),
-                broker: "Oracle Layer".into(),
+                broker: "Photon Network".into(),
                 severity: Severity::Crit,
                 title: "Aggregation failed".into(),
                 detail: format!("rdk_oracle::AggregationError: {e:?}"),

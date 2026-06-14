@@ -153,7 +153,7 @@ pub async fn run(state: AppState, speed: f64, dials: Dials) {
     if at_risk > 0 {
         send(SimEvent::BrokerAlert {
             t_ms: real(2550),
-            broker: "Prime Broker Alpha".into(),
+            broker: "Kintetsu Synth".into(),
             severity: Severity::Warn,
             title: format!("{at_risk} stablecoin-margined position(s) at risk"),
             detail: "Collateral haircut applied as USDC mark drops.".into(),
@@ -178,7 +178,7 @@ pub async fn run(state: AppState, speed: f64, dials: Dials) {
         send(SimEvent::Liquidation {
             t_ms: real(story_t),
             position_id: format!("POS-{}", record.account.0),
-            broker: "Prime Broker Alpha".into(),
+            broker: broker_for(record.account),
             notional_usd: notional as f64,
             price: mark_liq.0 as f64,
             method,
@@ -212,4 +212,11 @@ fn ingest_usdc(oracle: &mut OracleState, price_x10000: u64, now: u64) {
         let _ = oracle.ingest(obs, now);
     }
     let _ = oracle.refresh(now);
+}
+
+fn broker_for(account: AccountId) -> String {
+    match account.0 % 3 {
+        0 => "Daiwa Vector".into(),
+        _ => "Kintetsu Synth".into(),
+    }
 }

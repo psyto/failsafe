@@ -452,11 +452,11 @@ function CityHeader() {
 
 type BrokerStatus = "healthy" | "warn" | "crit" | "liq";
 
-const BROKERS: { name: string; x: number; w: number; h: number; windows: [number, number] }[] = [
-  { name: "Prime Broker Alpha", x: 60, w: 110, h: 170, windows: [4, 7] },
-  { name: "Prime Broker Beta", x: 200, w: 130, h: 200, windows: [5, 8] },
-  { name: "Prime Broker Gamma", x: 360, w: 90, h: 140, windows: [3, 6] },
-  { name: "Prime Broker Delta", x: 480, w: 120, h: 220, windows: [4, 9] },
+const BROKERS: { name: string; short: string; x: number; w: number; h: number; windows: [number, number] }[] = [
+  { name: "Tachi Capital", short: "TACHI", x: 60, w: 110, h: 170, windows: [4, 7] },
+  { name: "Kintetsu Synth", short: "KINTETSU", x: 200, w: 130, h: 200, windows: [5, 8] },
+  { name: "Daiwa Vector", short: "DAIWA", x: 360, w: 90, h: 140, windows: [3, 6] },
+  { name: "Black Ice Markets", short: "BLACK ICE", x: 480, w: 120, h: 220, windows: [4, 9] },
 ];
 
 function statusColor(s: BrokerStatus) {
@@ -551,7 +551,7 @@ function CitySkyline({ events }: { events: EventWithId[] }) {
                 fill={c.stroke}
                 letterSpacing="2"
               >
-                {b.name.split(" ")[2].toUpperCase()}
+                {b.short}
               </text>
             </g>
           );

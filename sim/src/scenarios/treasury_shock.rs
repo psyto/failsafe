@@ -107,7 +107,7 @@ pub async fn run(state: AppState, speed: f64, dials: Dials) {
     if at_risk > 0 {
         send(SimEvent::BrokerAlert {
             t_ms: real(1500),
-            broker: "Prime Broker Alpha".into(),
+            broker: "Tachi Capital".into(),
             severity: Severity::Warn,
             title: format!("{at_risk} position(s) at risk"),
             detail: "Margin ratio sits between maintenance and initial. No close yet.".into(),
@@ -196,7 +196,7 @@ fn ingest_all(oracle: &mut OracleState, price: u64, now: u64) {
 
 fn broker_for(account: AccountId) -> String {
     match account.0 % 2 {
-        0 => "Prime Broker Beta".into(),
-        _ => "Prime Broker Alpha".into(),
+        0 => "Black Ice Markets".into(),
+        _ => "Tachi Capital".into(),
     }
 }
