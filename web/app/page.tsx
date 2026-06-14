@@ -1112,10 +1112,33 @@ function DetailPanel({
 function Footer() {
   return (
     <footer className="relative z-10 border-t border-[var(--color-grid)] py-6 px-6">
-      <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40">
-        <div>FAILSAFE · v0.1 · Tokyo 2042 archive access</div>
-        <div>Engines: Fabrknt rdk · OpenHL · Princeps</div>
-        <div>The system shown here is the system that runs.</div>
+      <div className="max-w-6xl mx-auto flex flex-col gap-3 text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>FAILSAFE · v0.1 · Tokyo 2042 archive access</div>
+          <div>Engines: Fabrknt rdk · OpenHL · Princeps</div>
+          <div>The system shown here is the system that runs.</div>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 border-t border-[var(--color-grid)]">
+          <span className="text-[var(--color-fg)]/60">Elsewhere in the Universe:</span>
+          <a
+            href="https://fabrknt.com"
+            className="text-[var(--color-cyan)] hover:glow-cyan transition"
+          >
+            Fabrknt &nearr;
+          </a>
+          <a
+            href="https://fabrknt.com#why-now"
+            className="text-[var(--color-cyan)] hover:glow-cyan transition"
+          >
+            Sandboxes (Reactor) &nearr;
+          </a>
+          <a
+            href="https://rethlab.fabrknt.com"
+            className="text-[var(--color-cyan)] hover:glow-cyan transition"
+          >
+            RethLab (Dojo) &nearr;
+          </a>
+        </div>
       </div>
     </footer>
   );
