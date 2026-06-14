@@ -452,11 +452,15 @@ function CityHeader() {
 
 type BrokerStatus = "healthy" | "warn" | "crit" | "liq";
 
+const SKYLINE_W = 1200;
+const SKYLINE_H = 200;
+const GROUND_Y = 190;
+
 const BROKERS: { name: string; short: string; x: number; w: number; h: number; windows: [number, number] }[] = [
-  { name: "Tachi Capital", short: "TACHI", x: 60, w: 110, h: 170, windows: [4, 7] },
-  { name: "Kintetsu Synth", short: "KINTETSU", x: 200, w: 130, h: 200, windows: [5, 8] },
-  { name: "Daiwa Vector", short: "DAIWA", x: 360, w: 90, h: 140, windows: [3, 6] },
-  { name: "Black Ice Markets", short: "BLACK ICE", x: 480, w: 120, h: 220, windows: [4, 9] },
+  { name: "Tachi Capital", short: "TACHI", x: 80, w: 200, h: 130, windows: [4, 7] },
+  { name: "Kintetsu Synth", short: "KINTETSU", x: 340, w: 240, h: 160, windows: [5, 8] },
+  { name: "Atlas Vector", short: "ATLAS", x: 640, w: 160, h: 110, windows: [3, 6] },
+  { name: "Black Ice Markets", short: "BLACK ICE", x: 860, w: 240, h: 170, windows: [4, 9] },
 ];
 
 function statusColor(s: BrokerStatus) {
@@ -493,20 +497,28 @@ function CitySkyline({ events }: { events: EventWithId[] }) {
         <span>City Map · Tokyo Financial District</span>
         <span className="text-[var(--color-fg)]/30">{BROKERS.length} prime brokers</span>
       </div>
-      <div className="relative">
-        <svg viewBox="0 0 660 244" className="w-full h-28 md:h-36" preserveAspectRatio="xMidYMax meet">
+      <div>
+        <div
+          className="relative w-full"
+          style={{ aspectRatio: `${SKYLINE_W} / ${SKYLINE_H}` }}
+        >
+        <svg
+          viewBox={`0 0 ${SKYLINE_W} ${SKYLINE_H}`}
+          className="absolute inset-0 w-full h-full"
+          preserveAspectRatio="none"
+        >
           <defs>
             <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="rgba(0,240,255,0.15)" />
               <stop offset="100%" stopColor="rgba(0,240,255,0)" />
             </linearGradient>
           </defs>
-          <line x1="0" y1="240" x2="660" y2="240" stroke="var(--color-grid)" strokeWidth="1" />
-          <rect x="0" y="240" width="660" height="4" fill="url(#ground)" />
+          <line x1="0" y1={GROUND_Y} x2={SKYLINE_W} y2={GROUND_Y} stroke="var(--color-grid)" strokeWidth="1" />
+          <rect x="0" y={GROUND_Y} width={SKYLINE_W} height={SKYLINE_H - GROUND_Y} fill="url(#ground)" />
           {BROKERS.map((b) => {
             const status = statuses.map.get(b.name) ?? "healthy";
             const c = statusColor(status);
-            const top = 240 - b.h;
+            const top = GROUND_Y - b.h;
             const winRows = b.windows[1];
             const winCols = b.windows[0];
             const padX = 12;
@@ -547,11 +559,12 @@ function CitySkyline({ events }: { events: EventWithId[] }) {
             );
           })}
         </svg>
-        <div className="mt-1 relative h-4">
+        </div>
+        <div className="relative mt-1 h-4 w-full">
           {BROKERS.map((b) => {
             const status = statuses.map.get(b.name) ?? "healthy";
             const c = statusColor(status);
-            const centerPct = ((b.x + b.w / 2) / 660) * 100;
+            const centerPct = ((b.x + b.w / 2) / SKYLINE_W) * 100;
             return (
               <div
                 key={b.name}

@@ -204,7 +204,7 @@ export const stablecoinDepegScript: SimEvent[] = [
     kind: "Liquidation",
     t_ms: 3700,
     position_id: "POS-5103",
-    broker: "Daiwa Vector",
+    broker: "Atlas Vector",
     notional_usd: 688_000,
     price: 1720,
     method: "Adl",

@@ -94,7 +94,7 @@ These are the 4 Prime Brokers featured in scenarios. They are *Fabrknt's custome
 |---|---|---|---|
 | **Tachi Capital** | Princeps | Agile, low-latency, leveraged. Old samurai metaphor, sharp. | Cyan |
 | **Kintetsu Synth** | Princeps + OpenHL | Synthetic instruments specialist. Conservative haircuts. | Yellow |
-| **Daiwa Vector** | Vector (Solana) | Vector-of-risk specialist. Multi-chain. | Magenta |
+| **Atlas Vector** | Vector (Solana) | Multi-chain vector-of-risk specialist; carries many positions across many ledgers. | Magenta |
 | **Black Ice Markets** | OpenHL (forked) | High-frequency, cold-blooded, the wild card. Forks the engine. | Red (only visible during stress) |
 
 In scenarios where "Prime Broker Alpha" / "Prime Broker Beta" appear, those are placeholders that will be replaced with these canonical names.

@@ -216,7 +216,7 @@ fn ingest_usdc(oracle: &mut OracleState, price_x10000: u64, now: u64) {
 
 fn broker_for(account: AccountId) -> String {
     match account.0 % 3 {
-        0 => "Daiwa Vector".into(),
+        0 => "Atlas Vector".into(),
         _ => "Kintetsu Synth".into(),
     }
 }
