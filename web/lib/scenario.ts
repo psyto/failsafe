@@ -2,24 +2,33 @@ import type { SimEvent } from "./types";
 
 export type ScenarioId = "treasury_shock" | "stablecoin_depeg" | "oracle_attack";
 
-export const SCENARIOS: { id: ScenarioId; label: string; verb: string; tagline: string }[] = [
+export const SCENARIOS: {
+  id: ScenarioId;
+  label: string;
+  canon: string;
+  verb: string;
+  tagline: string;
+}[] = [
   {
     id: "treasury_shock",
     label: "Treasury Shock",
-    verb: "Trigger",
-    tagline: "Risk-off, leveraged longs liquidate.",
+    canon: "The Yield Spike of 2042-Q3",
+    verb: "Replay",
+    tagline: "Tokyo Fed surprise +3pp hike. Tachi Capital and Black Ice take hits.",
   },
   {
     id: "stablecoin_depeg",
     label: "Stablecoin Depeg",
-    verb: "Trigger",
-    tagline: "USDC -6%, vault NAV impaired, cascade ensues.",
+    canon: "The USDC Reserve Audit Crisis of 2042-Q4",
+    verb: "Replay",
+    tagline: "Stablecoin trust event. Kintetsu and Atlas margined positions blow up.",
   },
   {
     id: "oracle_attack",
     label: "Oracle Attack",
-    verb: "Stage",
-    tagline: "One feed reports $99,999. Watch the system catch it.",
+    canon: "The Publisher #4 Incident of 2042-Q1",
+    verb: "Replay",
+    tagline: "One Photon feed reports $99,999. Watch the deviation filter hold.",
   },
 ];
 

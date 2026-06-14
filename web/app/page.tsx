@@ -349,7 +349,7 @@ export default function Page() {
 
       <section className="relative z-10 px-6 pb-12 max-w-7xl mx-auto border-t border-[var(--color-grid)] pt-6">
         <div className="text-[10px] tracking-[0.3em] uppercase text-[var(--color-fg)]/40 mb-3">
-          Configure
+          Operator Controls · Scenario / Replay / Dials
         </div>
         <div className="space-y-3">
           <ScenarioPicker
@@ -850,10 +850,13 @@ function ScenarioPicker({
                   : "border-[var(--color-grid)] hover:border-[var(--color-fg)]/30"}
                 ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
             >
-              <div className={`text-xs tracking-[0.2em] uppercase font-bold ${sel ? "text-[var(--color-cyan)] glow-cyan" : "text-[var(--color-fg)]/80"}`}>
-                {s.label}
+              <div className="text-[9px] tracking-[0.3em] uppercase text-[var(--color-fg)]/40 mb-1">
+                Archive · {s.label}
               </div>
-              <div className="mt-1 text-[10px] text-[var(--color-fg)]/40 leading-snug">
+              <div className={`text-sm font-bold leading-tight ${sel ? "text-[var(--color-cyan)] glow-cyan" : "text-[var(--color-fg)]/85"}`}>
+                {s.canon}
+              </div>
+              <div className="mt-1.5 text-[10px] text-[var(--color-fg)]/40 leading-snug">
                 {s.tagline}
               </div>
             </button>
@@ -899,8 +902,9 @@ function TriggerBar({
           Reset
         </button>
       )}
-      <div className="text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40 ml-auto">
-        {meta.tagline}
+      <div className="text-[10px] tracking-widest uppercase text-[var(--color-fg)]/40 ml-auto text-right max-w-md">
+        <span className="text-[var(--color-fg)]/60">Archive · </span>
+        {meta.canon}
       </div>
     </div>
   );
