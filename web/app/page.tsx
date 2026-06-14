@@ -493,70 +493,88 @@ function CitySkyline({ events }: { events: EventWithId[] }) {
         <span>City Map · Tokyo Financial District</span>
         <span className="text-[var(--color-fg)]/30">{BROKERS.length} prime brokers</span>
       </div>
-      <svg viewBox="0 0 660 260" className="w-full h-24 md:h-32">
-        <defs>
-          <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(0,240,255,0.15)" />
-            <stop offset="100%" stopColor="rgba(0,240,255,0)" />
-          </linearGradient>
-        </defs>
-        <line x1="0" y1="244" x2="660" y2="244" stroke="var(--color-grid)" strokeWidth="1" />
-        <rect x="0" y="244" width="660" height="16" fill="url(#ground)" />
-        {BROKERS.map((b) => {
-          const status = statuses.map.get(b.name) ?? "healthy";
-          const c = statusColor(status);
-          const top = 244 - b.h;
-          const winRows = b.windows[1];
-          const winCols = b.windows[0];
-          const padX = 12;
-          const padY = 16;
-          const cellW = (b.w - padX * 2) / winCols;
-          const cellH = (b.h - padY * 2) / winRows;
-          const winW = cellW * 0.55;
-          const winH = cellH * 0.45;
-          const isLiq = status === "liq";
-          return (
-            <g key={b.name} className={isLiq ? "flicker" : ""}>
-              <rect
-                x={b.x}
-                y={top}
-                width={b.w}
-                height={b.h}
-                fill={c.fill}
-                stroke={c.stroke}
-                strokeWidth="1.5"
-              />
-              {Array.from({ length: winRows }).flatMap((_, row) =>
-                Array.from({ length: winCols }).map((_, col) => {
-                  const dim = (row + col) % 3 === 0 && status === "healthy";
-                  return (
-                    <rect
-                      key={`${row}-${col}`}
-                      x={b.x + padX + col * cellW + (cellW - winW) / 2}
-                      y={top + padY + row * cellH + (cellH - winH) / 2}
-                      width={winW}
-                      height={winH}
-                      fill={c.win}
-                      opacity={dim ? 0.25 : 0.7}
-                    />
-                  );
-                })
-              )}
-              <text
-                x={b.x + b.w / 2}
-                y={252}
-                textAnchor="middle"
-                fontSize="8"
-                fontFamily="JetBrains Mono, monospace"
-                fill={c.stroke}
-                letterSpacing="2"
+      <div className="relative">
+        <svg viewBox="0 0 660 244" className="w-full h-28 md:h-36" preserveAspectRatio="xMidYMax meet">
+          <defs>
+            <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(0,240,255,0.15)" />
+              <stop offset="100%" stopColor="rgba(0,240,255,0)" />
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="240" x2="660" y2="240" stroke="var(--color-grid)" strokeWidth="1" />
+          <rect x="0" y="240" width="660" height="4" fill="url(#ground)" />
+          {BROKERS.map((b) => {
+            const status = statuses.map.get(b.name) ?? "healthy";
+            const c = statusColor(status);
+            const top = 240 - b.h;
+            const winRows = b.windows[1];
+            const winCols = b.windows[0];
+            const padX = 12;
+            const padY = 16;
+            const cellW = (b.w - padX * 2) / winCols;
+            const cellH = (b.h - padY * 2) / winRows;
+            const winW = cellW * 0.55;
+            const winH = cellH * 0.45;
+            const isLiq = status === "liq";
+            return (
+              <g key={b.name} className={isLiq ? "flicker" : ""}>
+                <rect
+                  x={b.x}
+                  y={top}
+                  width={b.w}
+                  height={b.h}
+                  fill={c.fill}
+                  stroke={c.stroke}
+                  strokeWidth="1.5"
+                />
+                {Array.from({ length: winRows }).flatMap((_, row) =>
+                  Array.from({ length: winCols }).map((_, col) => {
+                    const dim = (row + col) % 3 === 0 && status === "healthy";
+                    return (
+                      <rect
+                        key={`${row}-${col}`}
+                        x={b.x + padX + col * cellW + (cellW - winW) / 2}
+                        y={top + padY + row * cellH + (cellH - winH) / 2}
+                        width={winW}
+                        height={winH}
+                        fill={c.win}
+                        opacity={dim ? 0.25 : 0.7}
+                      />
+                    );
+                  })
+                )}
+              </g>
+            );
+          })}
+        </svg>
+        <div className="mt-1 relative h-4">
+          {BROKERS.map((b) => {
+            const status = statuses.map.get(b.name) ?? "healthy";
+            const c = statusColor(status);
+            const centerPct = ((b.x + b.w / 2) / 660) * 100;
+            return (
+              <div
+                key={b.name}
+                className="absolute top-0 text-[11px] font-bold tracking-[0.2em] whitespace-nowrap"
+                style={{
+                  left: `${centerPct}%`,
+                  transform: "translateX(-50%)",
+                  color: c.stroke,
+                  textShadow: status === "healthy"
+                    ? "0 0 6px rgba(0,240,255,0.4)"
+                    : status === "liq"
+                    ? "0 0 8px rgba(255,59,59,0.6)"
+                    : status === "crit"
+                    ? "0 0 6px rgba(255,0,170,0.5)"
+                    : "0 0 4px rgba(250,204,21,0.4)",
+                }}
               >
                 {b.short}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
